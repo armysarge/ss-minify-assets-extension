@@ -6,6 +6,8 @@ jspm_packages/
 *.vsix
 out/
 dist/
+*.ps1
+GITHUB-SETUP.md
 
 # Python
 __pycache__/

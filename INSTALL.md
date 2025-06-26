@@ -17,7 +17,7 @@
    ```
    vsce package
    ```
-   
+
    (If you encounter a repository field error, you can use this command instead:)
    ```
    vsce package --allow-missing-repository

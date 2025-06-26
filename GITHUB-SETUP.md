@@ -33,7 +33,7 @@ These instructions will help you initialize your local repository and connect it
    ```
    git push -u origin master
    ```
-   
+
    If your default branch is called "main" instead of "master", use:
    ```
    git push -u origin main
