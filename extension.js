@@ -90,17 +90,40 @@ function activate(context) {
             // Extract statistics from the output
             const cssMatches = result.match(/Found (\d+) CSS files/);
             const jsMatches = result.match(/Found (\d+) JavaScript files/);
-            const successMatches = result.match(/Successfully minified (\d+) files/);
+
+            // Try different patterns to find success count
+            let successMatches = result.match(/Minified (\d+) files/);
+            if (!successMatches) {
+                successMatches = result.match(/Counted (\d+) successful minifications/);
+            }
+
+            // Check CSS/JS specific counts as a fallback
+            const cssSuccessMatches = result.match(/CSS: (\d+)\//);
+            const jsSuccessMatches = result.match(/JS: (\d+)\//);
 
             const cssCount = cssMatches ? parseInt(cssMatches[1]) : 0;
             const jsCount = jsMatches ? parseInt(jsMatches[1]) : 0;
-            const successCount = successMatches ? parseInt(successMatches[1]) : 0;
+
+            let successCount = successMatches ? parseInt(successMatches[1]) : 0;
+
+            // If we couldn't parse the success count from the main output, try to calculate it from components
+            if (successCount === 0 && (cssSuccessMatches || jsSuccessMatches)) {
+                const cssSuccess = cssSuccessMatches ? parseInt(cssSuccessMatches[1]) : 0;
+                const jsSuccess = jsSuccessMatches ? parseInt(jsSuccessMatches[1]) : 0;
+                successCount = cssSuccess + jsSuccess;
+            }
 
             if (cssCount === 0 && jsCount === 0) {
                 vscode.window.showInformationMessage(`No CSS or JS files found in ${path.basename(dirPath)}.`);
             } else {
+                // Check for nested directory information
+                const nestedMatches = result.match(/Successfully processed (\d+) files in nested subdirectories/);
+                const nestedMessage = nestedMatches && parseInt(nestedMatches[1]) > 0
+                    ? ` (including files in subdirectories)`
+                    : '';
+
                 vscode.window.showInformationMessage(
-                    `Minified ${successCount} of ${cssCount + jsCount} files in ${path.basename(dirPath)}.`
+                    `Minified ${successCount} of ${cssCount + jsCount} files in ${path.basename(dirPath)}${nestedMessage}.`
                 );
             }
         } catch (error) {
@@ -110,7 +133,156 @@ function activate(context) {
         }
     });
 
-    context.subscriptions.push(minifyFileDisposable, minifyDirDisposable);
+    // Register command to minify only CSS files in a directory
+    let minifyDirCSSDisposable = vscode.commands.registerCommand('minify-assets.minifyDirectoryCSS', async (uri) => {
+        if (!uri) {
+            vscode.window.showWarningMessage('No directory selected.');
+            return;
+        }
+
+        const dirPath = uri.fsPath;
+
+        const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+        statusBarItem.text = `$(sync~spin) Minifying CSS files in ${path.basename(dirPath)}...`;
+        statusBarItem.show();
+
+        try {
+            // Create a modified version of the script to handle CSS only
+            const tmpScriptPath = path.join(context.extensionPath, 'temp_css_only.py');
+
+            // Read the original script
+            const scriptContent = fs.readFileSync(scriptPath, 'utf8');
+
+            // Modify the process_directory function to only process CSS files
+            const modifiedScript = scriptContent.replace(
+                /js_files = glob\.glob\(os\.path\.join\(directory, '\*\*', '\*\.js'\), recursive=True\)/g,
+                "js_files = []  # Skip JS files"
+            );
+
+            // Write the modified script
+            fs.writeFileSync(tmpScriptPath, modifiedScript);
+
+            const result = await runPythonScript(tmpScriptPath, dirPath, true);
+
+            // Clean up temporary file
+            fs.unlinkSync(tmpScriptPath);            // Extract statistics from the output
+            const cssMatches = result.match(/Found (\d+) CSS files/);
+
+            // Try different patterns to find success count
+            let successMatches = result.match(/Actually minified (\d+) files/);
+            if (!successMatches) {
+                successMatches = result.match(/Counted (\d+) successful minifications/);
+            }
+
+            // Check CSS specific counts as a fallback
+            const cssSuccessMatches = result.match(/CSS: (\d+)\//);
+
+            const cssCount = cssMatches ? parseInt(cssMatches[1]) : 0;
+            let successCount = successMatches ? parseInt(successMatches[1]) : 0;
+
+            // If we couldn't parse the success count from the main output, try to get it from CSS count
+            if (successCount === 0 && cssSuccessMatches) {
+                successCount = parseInt(cssSuccessMatches[1]);
+            }
+
+            if (cssCount === 0) {
+                vscode.window.showInformationMessage(`No CSS files found in ${path.basename(dirPath)}.`);
+            } else {
+                // Check for nested directory information
+                const nestedMatches = result.match(/Successfully processed (\d+) files in nested subdirectories/);
+                const nestedMessage = nestedMatches && parseInt(nestedMatches[1]) > 0
+                    ? ` (including files in subdirectories)`
+                    : '';
+
+                vscode.window.showInformationMessage(
+                    `Minified ${successCount} of ${cssCount} CSS files in ${path.basename(dirPath)}${nestedMessage}.`
+                );
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage(`Error minifying CSS files: ${error.message}`);
+        } finally {
+            statusBarItem.dispose();
+        }
+    });
+
+    // Register command to minify only JS files in a directory
+    let minifyDirJSDisposable = vscode.commands.registerCommand('minify-assets.minifyDirectoryJS', async (uri) => {
+        if (!uri) {
+            vscode.window.showWarningMessage('No directory selected.');
+            return;
+        }
+
+        const dirPath = uri.fsPath;
+
+        const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left);
+        statusBarItem.text = `$(sync~spin) Minifying JS files in ${path.basename(dirPath)}...`;
+        statusBarItem.show();
+
+        try {
+            // Create a modified version of the script to handle JS only
+            const tmpScriptPath = path.join(context.extensionPath, 'temp_js_only.py');
+
+            // Read the original script
+            const scriptContent = fs.readFileSync(scriptPath, 'utf8');
+
+            // Modify the process_directory function to only process JS files
+            const modifiedScript = scriptContent.replace(
+                /css_files = glob\.glob\(os\.path\.join\(directory, '\*\*', '\*\.css'\), recursive=True\)/g,
+                "css_files = []  # Skip CSS files"
+            );
+
+            // Write the modified script
+            fs.writeFileSync(tmpScriptPath, modifiedScript);
+
+            const result = await runPythonScript(tmpScriptPath, dirPath, true);
+
+            // Clean up temporary file
+            fs.unlinkSync(tmpScriptPath);            // Extract statistics from the output
+            const jsMatches = result.match(/Found (\d+) JavaScript files/);
+
+            // Try different patterns to find success count
+            let successMatches = result.match(/Actually minified (\d+) files/);
+            if (!successMatches) {
+                successMatches = result.match(/Counted (\d+) successful minifications/);
+            }
+
+            // Check JS specific counts as a fallback
+            const jsSuccessMatches = result.match(/JS: (\d+)\//);
+
+            const jsCount = jsMatches ? parseInt(jsMatches[1]) : 0;
+            let successCount = successMatches ? parseInt(successMatches[1]) : 0;
+
+            // If we couldn't parse the success count from the main output, try to get it from JS count
+            if (successCount === 0 && jsSuccessMatches) {
+                successCount = parseInt(jsSuccessMatches[1]);
+            }
+
+            if (jsCount === 0) {
+                vscode.window.showInformationMessage(`No JavaScript files found in ${path.basename(dirPath)}.`);
+            } else {
+                // Check for nested directory information
+                const nestedMatches = result.match(/Successfully processed (\d+) files in nested subdirectories/);
+                const nestedMessage = nestedMatches && parseInt(nestedMatches[1]) > 0
+                    ? ` (including files in subdirectories)`
+                    : '';
+
+                vscode.window.showInformationMessage(
+                    `Minified ${successCount} of ${jsCount} JavaScript files in ${path.basename(dirPath)}${nestedMessage}.`
+                );
+            }
+        } catch (error) {
+            vscode.window.showErrorMessage(`Error minifying JavaScript files: ${error.message}`);
+        } finally {
+            statusBarItem.dispose();
+        }
+    });
+
+    context.subscriptions.push(
+        minifyFileDisposable,
+        minifyDirDisposable,
+        minifyDirCSSDisposable,
+        minifyDirJSDisposable
+    );
 }
 
 /**

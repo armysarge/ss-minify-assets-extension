@@ -8,6 +8,7 @@ out/
 dist/
 *.ps1
 GITHUB-SETUP.md
+*.min.js
 
 # Python
 __pycache__/

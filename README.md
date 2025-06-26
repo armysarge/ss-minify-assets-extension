@@ -5,9 +5,15 @@ A Visual Studio Code extension that allows you to minify CSS and JavaScript file
 ## Features
 
 - Right-click on CSS or JS files to minify them
-- Right-click on folders to minify all CSS and JS files within (including in subdirectories)
+- Right-click on folders to:
+  - Minify all CSS and JS files (combined operation)
+  - Minify only CSS files
+  - Minify only JavaScript files
+- All operations include subdirectories
 - Saves minified versions with `.min.css` or `.min.js` extensions
 - Shows minification statistics (size reduction)
+- Skips empty files and files containing only whitespace
+- Also supports nested directories
 
 ## Requirements
 
@@ -23,6 +29,10 @@ A Visual Studio Code extension that allows you to minify CSS and JavaScript file
 
 2. **Minify All Files in a Directory:**
    - Right-click on a directory in the Explorer
+   - Choose one of the following options:
+     - "Minify all CSS/JS in directory" - Processes both CSS and JS files
+     - "Minify all CSS in directory" - Processes only CSS files
+     - "Minify all JS in directory" - Processes only JavaScript files
    - Select "Minify all CSS/JS in directory" from the context menu
    - All CSS and JS files in the directory (and subdirectories) will be minified
 

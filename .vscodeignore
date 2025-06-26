@@ -10,3 +10,9 @@ vsc-extension-quickstart.md
 .github/**
 __pycache__/**
 *.pyc
+*.ps1
+*.min.js
+*.min.css
+GITHUB-SETUP.md
+INSTALL.md
+dist/

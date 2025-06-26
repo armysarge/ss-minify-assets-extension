@@ -1,8 +1,8 @@
 {
   "name": "ss-minify-assets-extension",
   "displayName": "SS Minify CSS & JS",
-  "description": "Right-click to minify CSS and JavaScript files",
-  "version": "0.0.1",
+  "description": "Right-click in explorer to minify all CSS and/or JavaScript files",
+  "version": "0.0.2",
   "engines": {
     "vscode": "^1.60.0"
   },
@@ -16,7 +16,9 @@
   ],
   "activationEvents": [
     "onCommand:minify-assets.minifyFile",
-    "onCommand:minify-assets.minifyDirectory"
+    "onCommand:minify-assets.minifyDirectory",
+    "onCommand:minify-assets.minifyDirectoryCSS",
+    "onCommand:minify-assets.minifyDirectoryJS"
   ],
   "main": "./extension.js",
   "contributes": {
@@ -28,6 +30,14 @@
       {
         "command": "minify-assets.minifyDirectory",
         "title": "Minify all CSS/JS in directory"
+      },
+      {
+        "command": "minify-assets.minifyDirectoryCSS",
+        "title": "Minify all CSS in directory"
+      },
+      {
+        "command": "minify-assets.minifyDirectoryJS",
+        "title": "Minify all JS in directory"
       }
     ],
     "menus": {
@@ -39,6 +49,16 @@
         },
         {
           "command": "minify-assets.minifyDirectory",
+          "group": "7_modification",
+          "when": "explorerResourceIsFolder"
+        },
+        {
+          "command": "minify-assets.minifyDirectoryCSS",
+          "group": "7_modification",
+          "when": "explorerResourceIsFolder"
+        },
+        {
+          "command": "minify-assets.minifyDirectoryJS",
           "group": "7_modification",
           "when": "explorerResourceIsFolder"
         }
